@@ -117,29 +117,48 @@
       async function submitOrder(e) {
         e.preventDefault();
         const f = new FormData(e.target);
-        const ordine = {
-          data: new Date().toISOString(),
-          cliente: Object.fromEntries(f.entries()),
-          articoli: getCart().map((i) => ({ id: i.id, titolo: productById(i.id)?.title, qty: i.qty, prezzo: productById(i.id)?.price ?? null })),
-        };
+        const articoli = getCart().map((i) => ({ id: i.id, titolo: productById(i.id)?.title, qty: i.qty, prezzo: productById(i.id)?.price ?? null }));
+        const ordine = { data: new Date().toISOString(), cliente: Object.fromEntries(f.entries()), articoli };
+        const totale = articoli.reduce((s, a) => s + (a.prezzo != null ? a.prezzo * a.qty : 0), 0);
+        const suRichiesta = articoli.some((a) => a.prezzo == null);
+
+        /* 1) apre subito WhatsApp con il riepilogo dell'ordine (il cliente preme "Invia") */
+        const c = ordine.cliente;
+        const openedWa = openWhatsApp("Nuovo ordine dal sito 🛒", [
+          ...articoli.map((a) => `• ${a.titolo || a.id} × ${a.qty}${a.prezzo != null ? " — " + a.prezzo + " €" : " — su richiesta"}`),
+          "",
+          suRichiesta ? "Totale: da confermare (alcuni articoli su richiesta)" : `Totale indicativo: ${fmtPrice(totale)}`,
+          "",
+          `Nome: ${c.nome || "-"}`,
+          `Telefono: ${c.telefono || "-"}`,
+          c.note ? `Note / spedizione: ${c.note}` : "",
+        ].filter(Boolean));
+
+        /* 2) in parallelo salva l'ordine nell'area riservata (admin) */
         const r = await placeOrder(ordine);
         const n = document.getElementById("notice");
-        if (r.mode === "server") {
+        n.className = "notice show";
+        if (openedWa) {
+          if (r.mode === "server") {
+            localStorage.removeItem("cart");
+            updateCartBadge();
+            n.innerHTML = "✓ <b>WhatsApp aperto</b>: premi “Invia” nella chat per completare l'ordine.<br>L'ordine è anche registrato nell'area riservata del negozio.";
+          } else if (r.mode === "local") {
+            localStorage.removeItem("cart");
+            updateCartBadge();
+            n.innerHTML = "✓ <b>WhatsApp aperto</b>: premi “Invia” nella chat per completare l'ordine.<br><small>Nota: server non raggiungibile, quindi l'ordine non è stato registrato in area riservata.</small>";
+          } else {
+            n.innerHTML = `✓ <b>WhatsApp aperto</b>: premi “Invia” nella chat.<br><small>Registrazione in area riservata non riuscita (${r.message || "errore"}) — il carrello è ancora pieno.</small>`;
+          }
+        } else if (r.mode === "server") {
           localStorage.removeItem("cart");
           updateCartBadge();
-          n.className = "notice show";
           n.innerHTML = "✓ Ordine inviato con successo! Ti ricontatteremo per conferma e pagamento.";
         } else if (r.mode === "local") {
           localStorage.removeItem("cart");
           updateCartBadge();
-          n.className = "notice show";
-          n.innerHTML =
-            "⚠️ <b>Il server non è raggiungibile</b>: l'ordine è stato salvato solo su questo dispositivo e il negozio non lo ha ricevuto.<br>" +
-            "Per essere sicuro di non perderlo, invialo ora:" +
-            (r.waLink ? ` <a class="btn btn--small btn--accento" href="${r.waLink}" target="_blank" rel="noopener">💬 Invia su WhatsApp</a>` : "");
-          if (r.noBackend) n.innerHTML += "<br><small>Apri il sito da http://localhost:8080 o dal link online (non come file .html).</small>";
+          n.innerHTML = "⚠️ <b>Il server non è raggiungibile</b>: l'ordine è stato salvato solo su questo dispositivo e il negozio non lo ha ricevuto. Contattaci al " + (CFG.phone || "numero del negozio") + ".";
         } else {
-          n.className = "notice show";
           n.innerHTML = `❗ Invio non riuscito: ${r.message || "errore"}. <b>Il carrello è ancora pieno</b>, riprova oppure scrivici su WhatsApp.`;
         }
         render();

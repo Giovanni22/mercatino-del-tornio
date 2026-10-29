@@ -213,8 +213,18 @@ async function postJSON(path, payload, { retries = 1 } = {}) {
 function whatsappSummaryLink(titolo, righe) {
   const num = window.SHOP_CONFIG && window.SHOP_CONFIG.whatsapp;
   if (!num) return "";
-  const text = [titolo, ...righe].join("\n");
+  const text = [titolo, ...righe].filter(Boolean).join("\n");
   return "https://wa.me/" + num + "?text=" + encodeURIComponent(text);
+}
+
+/* Apre la chat WhatsApp con il messaggio già scritto.
+   Nota: l'invio vero e proprio lo fa il cliente premendo “Invia”. */
+function openWhatsApp(titolo, righe) {
+  const url = whatsappSummaryLink(titolo, righe);
+  if (!url) return false;
+  const w = window.open(url, "_blank");
+  if (!w) location.href = url;
+  return true;
 }
 
 function orderLines(ordine) {
@@ -329,11 +339,30 @@ async function submitQuoteForm(e, id) {
     articolo: { id, titolo: p?.title, prezzo: p?.price ?? null },
     nome: f.get("nome"), telefono: f.get("telefono"), note: f.get("note"),
   };
-  const r = await sendQuote(q);
+
+  /* 1) apre subito WhatsApp con la richiesta già scritta (il cliente preme "Invia") */
+  const openedWa = openWhatsApp("Richiesta preventivo dal sito", [
+    `Articolo: ${p?.title || id}`,
+    `Codice: ${id}`,
+    p?.price != null ? `Prezzo indicato: ${p.price} €` : "Prezzo: su richiesta",
+    "",
+    `Nome: ${q.nome || "-"}`,
+    `Telefono: ${q.telefono || "-"}`,
+    q.note ? `Note: ${q.note}` : "",
+  ].filter(Boolean));
   closeModal();
-  if (r.mode === "server") toast("Preventivo inviato ✓ Ti ricontatteremo");
-  else if (r.mode === "local") toast("⚠️ Server non raggiungibile: richiesta salvata solo su questo dispositivo. Scrivici su WhatsApp!", r.waLink);
-  else toast("❗ Invio non riuscito: " + (r.message || "errore") + ". Riprova o scrivici su WhatsApp.", window.SHOP_CONFIG.whatsappLink);
+
+  /* 2) in parallelo salva la richiesta nell'area riservata (admin) */
+  const r = await sendQuote(q);
+  if (openedWa) {
+    if (r.mode === "server") toast("✓ WhatsApp aperto: premi “Invia” nella chat. Richiesta registrata in area riservata.");
+    else if (r.mode === "local") toast("✓ WhatsApp aperto: premi “Invia”. (Server offline: richiesta salvata solo su questo dispositivo)");
+    else toast("✓ WhatsApp aperto: premi “Invia”. Salvataggio in area riservata fallito: " + (r.message || "errore"));
+  } else {
+    if (r.mode === "server") toast("Richiesta inviata ✓ Ti ricontatteremo");
+    else if (r.mode === "local") toast("⚠️ Server non raggiungibile: richiesta salvata solo su questo dispositivo.", r.waLink);
+    else toast("❗ Invio non riuscito: " + (r.message || "errore") + ". Riprova o scrivici su WhatsApp.", window.SHOP_CONFIG.whatsappLink);
+  }
 }
 
 /* ---------- Lightbox / scheda ---------- */
