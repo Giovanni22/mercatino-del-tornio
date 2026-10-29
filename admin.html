@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin — Mercatino del Tornio</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div class="admin">
+    <!-- LOGIN -->
+    <div id="admin-login" class="admin-login">
+      <div class="admin-login__card">
+        <h2>🔐 Area amministrativa</h2>
+        <p>Inserisci la password per gestire ordini e prezzi.</p>
+        <form onsubmit="login(event)">
+          <input type="password" id="password" placeholder="Password" required>
+          <button class="btn btn--accento btn--block" type="submit">Accedi</button>
+        </form>
+        <div class="admin-login__err" id="login-err"></div>
+      </div>
+    </div>
+
+    <!-- PANNELLO -->
+    <div id="admin-panel" style="display:none">
+      <header class="admin-top">
+        <div>
+          <h1>🛠️ Admin — Mercatino del Tornio</h1>
+          <span id="admin-info"></span>
+        </div>
+        <div class="admin-top__actions">
+          <a class="btn btn--ghost btn--dark" href="index.html" target="_blank">Vedi sito</a>
+          <button class="btn btn--ghost btn--dark" onclick="logout()">Esci</button>
+        </div>
+      </header>
+
+      <div class="admin-tabs">
+        <button class="admin-tab active" data-tab="orders" onclick="switchTab('orders')">Ordini</button>
+        <button class="admin-tab" data-tab="quotes" onclick="switchTab('quotes')">Preventivi</button>
+        <button class="admin-tab" data-tab="contacts" onclick="switchTab('contacts')">Messaggi</button>
+        <button class="admin-tab" data-tab="prices" onclick="switchTab('prices')">Prezzi</button>
+      </div>
+
+      <div class="admin-body">
+        <div id="tab-orders" class="admin-pane"></div>
+        <div id="tab-quotes" class="admin-pane" style="display:none"></div>
+        <div id="tab-contacts" class="admin-pane" style="display:none"></div>
+        <div id="tab-prices" class="admin-pane" style="display:none"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/config.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    let TOKEN = sessionStorage.getItem("admin_token") || "";
+    let CATALOG = null;
+
+    const AUTH = () => ({ Authorization: "Bearer " + TOKEN });
+
+    async function login(e) {
+      e.preventDefault();
+      const err = document.getElementById("login-err");
+      err.textContent = "";
+      try {
+        const res = await fetch(window.API_BASE + "/api/admin/login", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: document.getElementById("password").value }),
+        });
+        const j = await res.json();
+        if (!res.ok) throw new Error(j.error || "Errore");
+        TOKEN = j.token;
+        sessionStorage.setItem("admin_token", TOKEN);
+        showPanel();
+      } catch (ex) { err.textContent = ex.message; }
+    }
+    function logout() {
+      sessionStorage.removeItem("admin_token");
+      TOKEN = "";
+      location.reload();
+    }
+    function showPanel() {
+      document.getElementById("admin-login").style.display = "none";
+      document.getElementById("admin-panel").style.display = "block";
+      loadCatalog().then(() => { switchTab("orders"); });
+    }
+
+    async function loadCatalog() {
+      const res = await fetch(window.API_BASE + "/api/catalog");
+      CATALOG = await res.json();
+      return CATALOG;
+    }
+
+    async function api(path, opts) {
+      const res = await fetch(window.API_BASE + path, { ...opts, headers: { ...(opts?.headers || {}), ...AUTH(), "Content-Type": "application/json" } });
+      if (res.status === 401) { logout(); throw new Error("Sessione scaduta"); }
+      const j = await res.json();
+      if (!res.ok) throw new Error(j.error || "Errore");
+      return j;
+    }
+
+    function switchTab(t) {
+      document.querySelectorAll(".admin-tab").forEach((b) => b.classList.toggle("active", b.dataset.tab === t));
+      document.querySelectorAll(".admin-pane").forEach((p) => (p.style.display = "none"));
+      document.getElementById("tab-" + t).style.display = "block";
+      if (t === "orders") loadOrders();
+      if (t === "quotes") loadQuotes();
+      if (t === "contacts") loadContacts();
+      if (t === "prices") renderPrices();
+    }
+
+    function esc2(s) { return String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
+    function money(v) { return v == null ? "su richiesta" : v.toLocaleString("it-IT") + " €"; }
+    function fdate(s) { try { return new Date(s).toLocaleString("it-IT"); } catch { return s; } }
+
+    async function loadOrders() {
+      const pane = document.getElementById("tab-orders");
+      try {
+        const list = await api("/api/admin/orders");
+        if (!list.length) { pane.innerHTML = empty("Nessun ordine ricevuto"); return; }
+        pane.innerHTML = list.map((o) => `
+          <div class="admin-card">
+            <div class="admin-card__head"><b>${esc2(o.numero || o.data)}</b><span>${fdate(o.data)}</span></div>
+            <div class="admin-card__meta">
+              <b>${esc2(o.cliente?.nome)}</b> · ${esc2(o.cliente?.email)}
+              ${o.cliente?.telefono ? " · " + esc2(o.cliente.telefono) : ""}
+            </div>
+            <table class="admin-table">
+              <tr><th>Articolo</th><th>Qtà</th><th>Prezzo</th></tr>
+              ${(o.articoli || []).map((a) => `<tr><td>${esc2(a.titolo || a.id)}</td><td>${a.qty}</td><td>${money(a.prezzo)}</td></tr>`).join("")}
+            </table>
+            ${o.cliente?.note ? `<div class="admin-note"><b>Note:</b> ${esc2(o.cliente.note)}</div>` : ""}
+          </div>`).join("");
+      } catch (e) { pane.innerHTML = `<div class="admin-error">${esc2(e.message)}</div>`; }
+    }
+
+    async function loadQuotes() {
+      const pane = document.getElementById("tab-quotes");
+      try {
+        const list = await api("/api/admin/quotes");
+        if (!list.length) { pane.innerHTML = empty("Nessun preventivo richiesto"); return; }
+        pane.innerHTML = list.map((q) => `
+          <div class="admin-card">
+            <div class="admin-card__head"><b>${esc2(q.articolo?.titolo || q.articolo?.id)}</b><span>${fdate(q.data)}</span></div>
+            <div class="admin-card__meta"><b>${esc2(q.nome)}</b> · ${esc2(q.email)} ${q.telefono ? " · " + esc2(q.telefono) : ""}</div>
+            ${q.note ? `<div class="admin-note"><b>Note:</b> ${esc2(q.note)}</div>` : ""}
+          </div>`).join("");
+      } catch (e) { pane.innerHTML = `<div class="admin-error">${esc2(e.message)}</div>`; }
+    }
+
+    async function loadContacts() {
+      const pane = document.getElementById("tab-contacts");
+      try {
+        const list = await api("/api/admin/contacts");
+        if (!list.length) { pane.innerHTML = empty("Nessun messaggio"); return; }
+        pane.innerHTML = list.map((c) => `
+          <div class="admin-card">
+            <div class="admin-card__head"><b>${esc2(c.nome)}</b><span>${fdate(c.data)}</span></div>
+            <div class="admin-card__meta">${esc2(c.email)}</div>
+            <div class="admin-note">${esc2(c.messaggio)}</div>
+          </div>`).join("");
+      } catch (e) { pane.innerHTML = `<div class="admin-error">${esc2(e.message)}</div>`; }
+    }
+
+    let priceFilter = "";
+    function renderPrices() {
+      const pane = document.getElementById("tab-prices");
+      if (!CATALOG) { pane.innerHTML = "<p>Caricamento…</p>"; return; }
+      const q = priceFilter.toLowerCase();
+      const cats = CATALOG.categories.map((c) => c.name);
+      const list = CATALOG.products.filter((p) =>
+        !q || (p.title + " " + p.category + " " + (p.subcategory || "") + " " + p.ref).toLowerCase().includes(q)
+      );
+      pane.innerHTML = `
+        <div class="admin-toolbar">
+          <input type="search" placeholder="Cerca articolo (nome, categoria, riferimento…)" value="${esc2(priceFilter)}" oninput="priceFilter=this.value;renderPrices()">
+          <select onchange="priceFilter=this.value;renderPrices()">
+            <option value="">Tutte le categorie</option>
+            ${cats.map((c) => `<option ${priceFilter === c ? "selected" : ""} value="${esc2(c)}">${esc2(c)}</option>`).join("")}
+          </select>
+          <span class="admin-toolbar__count">${list.length} articoli</span>
+          <button class="btn btn--accento" onclick="savePrices()">💾 Salva prezzi</button>
+        </div>
+        <div class="admin-hint">Lascia il campo vuoto per "prezzo su richiesta". Si salvano solo i prezzi modificati rispetto al catalogo base.</div>
+        <div class="admin-prices">
+          ${list.slice(0, 800).map((p) => `
+            <div class="admin-price-row">
+              <div class="admin-price-row__img">${imgTag(p.img, p.title)}</div>
+              <div class="admin-price-row__info">
+                <div class="admin-price-row__title">${esc2(p.title)}</div>
+                <div class="admin-price-row__cat">${esc2(p.category)}${p.subcategory ? " · " + esc2(p.subcategory) : ""}</div>
+              </div>
+              <div class="admin-price-row__input">
+                <input type="number" step="0.01" min="0" data-id="${p.id}" value="${p.price != null ? p.price : ""}" placeholder="su richiesta">
+              </div>
+            </div>`).join("") || "<p>Nessun risultato</p>"}
+          ${list.length > 800 ? `<div class="admin-hint">Mostrati i primi 800: affina la ricerca.</div>` : ""}
+        </div>`;
+    }
+
+    async function savePrices() {
+      // stato completo: parte dai prezzi attuali del catalogo,
+      // poi sovrascrive con ciò che è stato modificato nei campi visibili
+      const prices = {};
+      (CATALOG.products || []).forEach((p) => (prices[p.id] = p.price ?? null));
+      document.querySelectorAll(".admin-price-row input[data-id]").forEach((inp) => {
+        prices[inp.dataset.id] = inp.value === "" ? null : Number(inp.value);
+      });
+      try {
+        const r = await api("/api/admin/prices", { method: "POST", body: JSON.stringify({ prices }) });
+        toast("Prezzi salvati ✓ (" + r.modificati + " modificati)");
+        await loadCatalog();
+        renderPrices();
+      } catch (e) { toast("Errore: " + e.message); }
+    }
+
+    function empty(msg) { return `<div class="admin-empty">📭 ${esc2(msg)}</div>`; }
+
+    if (TOKEN) showPanel();
+  </script>
+</body>
+</html>

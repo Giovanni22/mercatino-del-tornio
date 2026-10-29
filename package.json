@@ -1,0 +1,19 @@
+{
+  "name": "mercatino-del-tornio",
+  "version": "2.0.0",
+  "description": "E-commerce Mercatino del Tornio — utensileria industriale usata e ricondizionata",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {},
+  "optionalDependencies": {
+    "nodemailer": "^6.9.0"
+  },
+  "license": "UNLICENSED",
+  "private": true
+}

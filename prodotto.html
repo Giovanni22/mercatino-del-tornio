@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Scheda prodotto — Mercatino del Tornio</title>
+  <meta name="description" content="Scheda prodotto — utensileria industriale usata e ricondizionata.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header" id="header"></header>
+
+  <section class="section" style="padding-top:2rem">
+    <div class="container">
+      <nav class="breadcrumb" id="breadcrumb"></nav>
+      <div id="product-detail"></div>
+
+      <div class="section__head" style="margin-top:3rem">
+        <div>
+          <span class="occhiello">Potrebbero interessarti</span>
+          <h2>Articoli simili</h2>
+        </div>
+      </div>
+      <div class="products-grid" id="related-grid"></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__bottom">
+        <span>© <span class="js-year">2026</span> Mercatino del Tornio — Tutti i diritti riservati</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    renderHeader("prodotti");
+
+    window.__initCatalog().then(function () {
+      const p = productById(new URLSearchParams(location.search).get("id"));
+      const CATS = window.CATALOG.categories;
+
+      document.getElementById("breadcrumb").innerHTML = `
+        <a href="index.html">Home</a> <span>/</span>
+        <a href="prodotti.html">Prodotti</a> <span>/</span>
+        <a href="prodotti.html?cat=${encodeURIComponent(catBySlug(p?.category)?.slug || "")}">${esc(p?.category || "—")}</a>
+        <span>/</span> <b>${esc(p?.title || "Prodotto non trovato")}</b>`;
+
+      if (!p) {
+        document.getElementById("product-detail").innerHTML = `
+          <div class="empty"><b>Prodotto non trovato</b>L'articolo potrebbe non essere più disponibile.
+          <div style="margin-top:1.2rem"><a class="btn btn--accento" href="prodotti.html">Torna al catalogo →</a></div></div>`;
+        document.getElementById("related-grid").innerHTML = "";
+        return;
+      }
+
+      document.title = p.title + " — Mercatino del Tornio";
+      const price = fmtPrice(p.price);
+      const related = (window.CATALOG.products || [])
+        .filter((x) => x.category === p.category && x.id !== p.id)
+        .slice(0, 6);
+
+      document.getElementById("product-detail").innerHTML = `
+        <div class="product-detail">
+          <div class="product-detail__gallery">
+            ${imgTag(p.imgLarge || p.img, p.title)}
+          </div>
+          <div class="product-detail__info">
+            <div class="product-detail__cat">${esc(p.category)}${p.subcategory ? " · " + esc(p.subcategory) : ""}</div>
+            <h1>${esc(p.title)}</h1>
+            <div class="product-detail__ref">Riferimento foto: <b>${esc(p.ref)}</b></div>
+            ${price
+              ? `<div class="product-detail__price">${price}</div>`
+              : `<div class="product-detail__price surichiesta">Prezzo su richiesta</div>`}
+            <p class="product-detail__desc">Articolo usato e ricondizionato, verificato in officina. La foto mostrata è quella reale dell'articolo in vendita. Per disponibilità, misure e spedizione contattaci o richiedi un preventivo.</p>
+            <div class="product-detail__actions">
+              ${price
+                ? `<button class="btn btn--accento" onclick="addToCart('${p.id}')">🛒 Aggiungi al carrello</button>`
+                : `<button class="btn btn--accento" onclick="requestQuote('${p.id}')">📐 Richiedi preventivo</button>`}
+              ${CFG.whatsappLink
+                ? `<a class="btn btn--ghost btn--dark" href="${esc(CFG.whatsappLink)}?text=${encodeURIComponent("Salve, sono interessato a: " + p.title)}" target="_blank" rel="noopener">💬 Chiedi su WhatsApp</a>`
+                : ""}
+              ${CFG.phone ? `<a class="btn btn--ghost btn--dark" href="tel:${esc(CFG.phoneLink)}">📞 ${esc(CFG.phone)}</a>` : ""}
+            </div>
+            <div class="product-detail__help">
+              <b>Hai domande?</b> ${CFG.email ? `Scrivici a <a href="mailto:${esc(CFG.email)}">${esc(CFG.email)}</a> oppure` : ""} compila il form di preventivo.
+            </div>
+          </div>
+        </div>`;
+
+      document.getElementById("related-grid").innerHTML = related.length
+        ? related.map(productCard).join("")
+        : `<div class="empty"><b>Nessun articolo simile</b></div>`;
+
+      function catBySlug(slug) { return CATS.find((c) => c.slug === slug); }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,27 @@
+# Configurazione per il deploy su Render.com
+# 1) Carica la cartella "negozio" su GitHub
+# 2) Vai su https://render.com → New → Blueprint → seleziona il repository
+# 3) Render crea il servizio e pubblica il sito automaticamente
+#
+# In alternativa: New → Web Service → Build: (vuoto) → Start: npm start
+
+services:
+  - type: web
+    name: mercatino-del-tornio
+    runtime: node
+    plan: free
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: PORT
+        value: "8080"
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: WEBHOOK_URL
+        sync: false
+      - key: EMAIL_FROM
+        value: negozio@mercatinodeltornio.it
+      - key: EMAIL_TO
+        value: info@mercatinodeltornio.it

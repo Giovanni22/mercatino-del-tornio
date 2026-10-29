@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prodotti — Mercatino del Tornio</title>
+  <meta name="description" content="Catalogo utensileria industriale: strumenti di misura, morse, mandrini, punte, frese, divisori. Usato e ricondizionato.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header" id="header"></header>
+
+  <section class="section" style="padding-top:2rem">
+    <div class="container">
+      <div class="section__head" style="margin-bottom:1.2rem">
+        <div>
+          <span class="occhiello">Catalogo</span>
+          <h2>Prodotti</h2>
+        </div>
+      </div>
+
+      <div class="layout">
+        <!-- FILTRI -->
+        <aside class="filters">
+          <h3>Filtri</h3>
+          <div class="filter-group">
+            <span class="filter-group__label">Categoria</span>
+            <div id="cat-filters"></div>
+          </div>
+          <div class="filter-group" id="subcat-group" style="display:none">
+            <span class="filter-group__label">Sottocategoria</span>
+            <div id="subcat-filters"></div>
+          </div>
+          <button class="btn btn--ghost btn--dark btn--block" onclick="resetFilters()">Azzera filtri</button>
+        </aside>
+
+        <!-- PRODOTTI -->
+        <div>
+          <div class="search-box">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+            <input type="text" id="search" placeholder="Cerca nel catalogo (es. calibro, morsa, mandrino...)" oninput="applyFilters()">
+          </div>
+
+          <div class="toolbar">
+            <div class="toolbar__count" id="result-count"></div>
+            <select id="sort" onchange="applyFilters()">
+              <option value="default">Ordina: predefinito</option>
+              <option value="price-asc">Prezzo crescente</option>
+              <option value="price-desc">Prezzo decrescente</option>
+              <option value="name">Nome A→Z</option>
+            </select>
+          </div>
+
+          <div class="products-grid" id="products-grid"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__bottom">
+        <span>© <span class="js-year">2026</span> Mercatino del Tornio — Tutti i diritti riservati</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    renderHeader("prodotti");
+
+    window.__initCatalog().then(function () {
+      const CATS = window.CATALOG.categories;
+      const PROD = window.CATALOG.products;
+
+      let state = { cat: null, sub: null, q: "" };
+
+      // leggi query string
+      const params = new URLSearchParams(location.search);
+      const qCat = params.get("cat");
+      if (qCat) {
+        const found = CATS.find((c) => c.slug === qCat);
+        if (found) state.cat = found.name;
+      }
+
+      function catBySlug(s) { return CATS.find((c) => c.slug === s); }
+
+      function renderCatFilters() {
+        const active = state.cat;
+        document.getElementById("cat-filters").innerHTML = [
+          `<div class="filter-item ${!active ? "active" : ""}" onclick="selectCat(null)"><span>Tutte</span><span class="n">${PROD.length}</span></div>`,
+          ...CATS.map((c) => `
+            <div class="filter-item ${active === c.name ? "active" : ""}" onclick="selectCat('${esc(c.name)}')">
+              <span>${esc(c.name)}</span><span class="n">${c.count}</span>
+            </div>`)
+        ].join("");
+      }
+
+      function renderSubcatFilters() {
+        const cat = CATS.find((c) => c.name === state.cat);
+        const group = document.getElementById("subcat-group");
+        if (!cat || !cat.subcategories.length) {
+          group.style.display = "none";
+          document.getElementById("subcat-filters").innerHTML = "";
+          return;
+        }
+        group.style.display = "block";
+        document.getElementById("subcat-filters").innerHTML = [
+          `<div class="filter-item ${!state.sub ? "active" : ""}" onclick="selectSub(null)"><span>Tutte</span><span class="n">${cat.count}</span></div>`,
+          ...cat.subcategories.map((s) => `
+            <div class="filter-item ${state.sub === s.name ? "active" : ""}" onclick="selectSub('${esc(s.name)}')">
+              <span>${esc(s.name)}</span><span class="n">${s.count}</span>
+            </div>`)
+        ].join("");
+      }
+
+      function selectCat(name) {
+        state.cat = name;
+        state.sub = null;
+        renderCatFilters();
+        renderSubcatFilters();
+        applyFilters();
+      }
+      function selectSub(name) {
+        state.sub = name;
+        renderSubcatFilters();
+        applyFilters();
+      }
+      function resetFilters() {
+        state = { cat: null, sub: null, q: "" };
+        document.getElementById("search").value = "";
+        renderCatFilters();
+        renderSubcatFilters();
+        applyFilters();
+      }
+
+      function applyFilters() {
+        state.q = document.getElementById("search").value.toLowerCase().trim();
+        const sort = document.getElementById("sort").value;
+
+        let list = PROD.filter((p) => {
+          if (state.cat && p.category !== state.cat) return false;
+          if (state.sub && p.subcategory !== state.sub) return false;
+          if (state.q) {
+            const hay = (p.title + " " + p.category + " " + (p.subcategory || "") + " " + p.ref).toLowerCase();
+            if (!hay.includes(state.q)) return false;
+          }
+          return true;
+        });
+
+        if (sort === "price-asc") list = [...list].sort((a, b) => (a.price ?? Infinity) - (b.price ?? Infinity));
+        if (sort === "price-desc") list = [...list].sort((a, b) => (b.price ?? -1) - (a.price ?? -1));
+        if (sort === "name") list = [...list].sort((a, b) => a.title.localeCompare(b.title, "it"));
+
+        document.getElementById("result-count").innerHTML =
+          `<b>${list.length}</b> articoli trovati` + (state.cat ? ` in <b>${esc(state.cat)}</b>` : "");
+        document.getElementById("products-grid").innerHTML =
+          list.length ? list.map(productCard).join("") :
+          `<div class="empty"><b>Nessun articolo trovato</b>Prova a cambiare filtro o parola chiave.</div>`;
+      }
+
+      renderCatFilters();
+      renderSubcatFilters();
+      applyFilters();
+
+      // espone le funzioni usate dagli handler inline
+      window.selectCat = selectCat;
+      window.selectSub = selectSub;
+      window.resetFilters = resetFilters;
+      window.applyFilters = applyFilters;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Carrello — Mercatino del Tornio</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header" id="header"></header>
+
+  <section class="section" style="padding-top:2rem">
+    <div class="container">
+      <div class="section__head" style="margin-bottom:1.4rem">
+        <div>
+          <span class="occhiello">Il tuo ordine</span>
+          <h2>Carrello</h2>
+        </div>
+      </div>
+
+      <div class="notice" id="notice"></div>
+
+      <div class="cart-layout" id="cart-layout"></div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__bottom">
+        <span>© <span class="js-year">2026</span> Mercatino del Tornio — Tutti i diritti riservati</span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    renderHeader("carrello");
+
+    window.__initCatalog().then(function () {
+      render();
+
+      function render() {
+        const cart = getCart();
+        const layout = document.getElementById("cart-layout");
+
+        if (!cart.length) {
+          layout.innerHTML = `
+            <div class="empty" style="grid-column:1/-1">
+              <b>Il carrello è vuoto</b>
+              Sfoglia il catalogo e aggiungi i prodotti che ti interessano.
+              <div style="margin-top:1.2rem"><a class="btn btn--accento" href="prodotti.html">Vai ai prodotti →</a></div>
+            </div>`;
+          return;
+        }
+
+        const items = cart.map((i) => ({ ...i, p: productById(i.id) })).filter((i) => i.p);
+
+        let subtotal = 0;
+        let anyNoPrice = false;
+        for (const i of items) {
+          if (i.p.price != null) subtotal += i.p.price * i.qty;
+          else anyNoPrice = true;
+        }
+
+        const listHtml = items.map((i) => {
+          const price = fmtPrice(i.p.price);
+          const lineTotal = i.p.price != null ? fmtPrice(i.p.price * i.qty) : null;
+          return `
+            <div class="cart-item">
+              <a class="cart-item__img" href="prodotto.html?id=${i.p.id}">${imgTag(i.p.img, i.p.title)}</a>
+              <div class="cart-item__info">
+                <h3><a href="prodotto.html?id=${i.p.id}">${esc(i.p.title)}</a></h3>
+                <div class="cat">${esc(i.p.category)}${i.p.subcategory ? " · " + esc(i.p.subcategory) : ""}</div>
+                <div class="cart-item__price ${price ? "" : "surichiesta"}">${price ? price + " cad." : "Prezzo su richiesta"}</div>
+                ${lineTotal ? `<div style="font-size:.85rem;color:var(--muto)">Totale riga: <b style="color:var(--testo)">${lineTotal}</b></div>` : ""}
+                <button class="cart-item__remove" onclick="removeFromCart('${i.p.id}');render()">Rimuovi</button>
+              </div>
+              <div class="cart-item__actions">
+                <div class="qty">
+                  <button onclick="setQty('${i.p.id}', ${i.qty - 1});render()">−</button>
+                  <span>${i.qty}</span>
+                  <button onclick="setQty('${i.p.id}', ${i.qty + 1});render()">+</button>
+                </div>
+              </div>
+            </div>`;
+        }).join("");
+
+        const noPriceHtml = anyNoPrice
+          ? `<div style="font-size:.85rem;color:var(--accento);margin-top:.5rem">⚠ Alcuni articoli hanno prezzo su richiesta: li confermeremo via email.</div>`
+          : "";
+
+        layout.innerHTML = `
+          <div class="cart-list">${listHtml}</div>
+          <div class="summary">
+            <h3>Riepilogo</h3>
+            <div class="summary__row"><span>Articoli</span><span>${cartCount()}</span></div>
+            <div class="summary__row"><span>Subtotale</span><b>${fmtPrice(subtotal) || "—"}</b></div>
+            ${noPriceHtml}
+            <div class="summary__row total"><span>Totale</span><b>${fmtPrice(subtotal) || "Su richiesta"}</b></div>
+
+            <h3 style="margin-top:1.4rem">Dati per l'ordine</h3>
+            <form onsubmit="submitOrder(event)">
+              <div class="form-group"><label>Nome e cognome *</label><input required name="nome"></div>
+              <div class="form-group"><label>Email *</label><input type="email" required name="email"></div>
+              <div class="form-group"><label>Telefono</label><input name="telefono"></div>
+              <div class="form-group"><label>Note / indirizzo spedizione</label><textarea rows="3" name="note"></textarea></div>
+              <button class="btn btn--accento btn--block" type="submit">Invia ordine</button>
+            </form>
+          </div>`;
+      }
+
+      // espone le funzioni usate dagli handler inline
+      window.render = render;
+      window.submitOrder = submitOrder;
+
+      async function submitOrder(e) {
+        e.preventDefault();
+        const f = new FormData(e.target);
+        const ordine = {
+          data: new Date().toISOString(),
+          cliente: Object.fromEntries(f.entries()),
+          articoli: getCart().map((i) => ({ id: i.id, titolo: productById(i.id)?.title, qty: i.qty, prezzo: productById(i.id)?.price ?? null })),
+        };
+        const r = await placeOrder(ordine);
+        localStorage.removeItem("cart");
+        updateCartBadge();
+        const n = document.getElementById("notice");
+        n.textContent = r.mode === "server"
+          ? "✓ Ordine inviato con successo! Ti ricontatteremo per conferma e pagamento."
+          : "✓ Ordine salvato (nessun server collegato): verrà gestito manualmente.";
+        n.classList.add("show");
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+    });
+  </script>
+</body>
+</html>

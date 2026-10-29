@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mercatino del Tornio — Utensileria industriale</title>
+  <meta name="description" content="Vendita di utensileria industriale e attrezzature per macchine utensili: strumenti di misura, mandrini, morse, punte, frese e divisori. Usato garantito.">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <header class="header" id="header"></header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="container hero__inner">
+      <div>
+        <span class="occhiello" style="color:#ffb37a">Utensileria industriale</span>
+        <h1>Strumenti di misura, <em>mandrini e utensili</em> per la tua officina</h1>
+        <p>Catalogo completo di attrezzature per macchine utensili: strumenti di misura, morse, mandrini, punte, frese e divisori. Prodotti usati e ricondizionati, pronti per la consegna.</p>
+        <div class="hero__cta">
+          <a class="btn btn--accento" href="prodotti.html">Sfoglia il catalogo →</a>
+          <a class="btn btn--ghost" href="#categorie">Vedi le categorie</a>
+        </div>
+        <div class="hero__stats">
+          <div><b id="stat-products">0</b><span>Prodotti</span></div>
+          <div><b id="stat-cats">0</b><span>Categorie</span></div>
+          <div><b>Usato garantito</b><span>Verificato in officina</span></div>
+        </div>
+      </div>
+      <div class="hero__card">
+        <h3>✓ Perché sceglierci</h3>
+        <ul>
+          <li>Attrezzatura tecnica verificata pezzo per pezzo</li>
+          <li>Foto reali di ogni articolo</li>
+          <li>Prezzi chiari, con preventivo su richiesta</li>
+          <li>Spedizione in tutta Italia</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- CATEGORIE -->
+  <section class="section" id="categorie">
+    <div class="container">
+      <div class="section__head">
+        <div>
+          <span class="occhiello">Catalogo</span>
+          <h2>Le nostre categorie</h2>
+        </div>
+        <a class="btn btn--ghost btn--dark" href="prodotti.html">Tutti i prodotti →</a>
+      </div>
+      <div class="cats-grid" id="cats-grid"></div>
+    </div>
+  </section>
+
+  <!-- IN EVIDENZA -->
+  <section class="section" style="padding-top:0">
+    <div class="container">
+      <div class="section__head">
+        <div>
+          <span class="occhiello">Selezione</span>
+          <h2>In evidenza</h2>
+        </div>
+      </div>
+      <div class="products-grid" id="featured-grid"></div>
+    </div>
+  </section>
+
+  <!-- CONTATTI -->
+  <section class="section" id="contatti" style="padding-top:0">
+    <div class="container">
+      <div class="section__head">
+        <div>
+          <span class="occhiello">Contatti</span>
+          <h2>Hai bisogno di un preventivo?</h2>
+          <p>Contattaci per informazioni su disponibilità, prezzi e spedizioni.</p>
+        </div>
+      </div>
+      <div class="contact-layout">
+        <div class="contact-cards">
+          <a class="cat-card" id="contact-phone"></a>
+          <a class="cat-card" id="contact-email"></a>
+          <div class="cat-card" id="contact-address"></div>
+          <div class="cat-card" id="contact-whatsapp"></div>
+        </div>
+        <form class="contact-form" id="contact-form" onsubmit="submitContact(event)">
+          <h3>Scrivici un messaggio</h3>
+          <div class="form-group"><label>Nome e cognome *</label><input required name="nome"></div>
+          <div class="form-group"><label>Email *</label><input type="email" required name="email"></div>
+          <div class="form-group"><label>Telefono</label><input name="telefono"></div>
+          <div class="form-group"><label>Messaggio *</label><textarea rows="4" required name="messaggio" placeholder="Di cosa hai bisogno?"></textarea></div>
+          <button class="btn btn--accento btn--block" type="submit">Invia messaggio</button>
+        </form>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container">
+      <div class="footer__grid">
+        <div>
+          <h4>🛠️ Mercatino del Tornio</h4>
+          <p>Vendita di utensileria industriale e attrezzature per macchine utensili: strumenti di misura, mandrini, morse, punte, frese e divisori.</p>
+        </div>
+        <div>
+          <h4>Catalogo</h4>
+          <ul id="footer-cats"></ul>
+        </div>
+        <div>
+          <h4>Link utili</h4>
+          <ul>
+            <li><a href="prodotti.html">Tutti i prodotti</a></li>
+            <li><a href="carrello.html">Carrello</a></li>
+            <li><a href="#contatti">Contatti</a></li>
+            <li><a href="admin.html">Area riservata</a></li>
+          </ul>
+        </div>
+      </div>
+      <div class="footer__bottom">
+        <span>© <span class="js-year">2026</span> Mercatino del Tornio — Tutti i diritti riservati</span>
+        <span id="footer-piva"></span>
+      </div>
+    </div>
+  </footer>
+
+  <script src="js/config.js"></script>
+  <script src="js/products.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    renderHeader("home");
+    renderContacts();
+
+    window.__initCatalog().then(function () {
+      const CATS = window.CATALOG.categories;
+      const PROD = window.CATALOG.products;
+
+      document.getElementById("stat-products").textContent = PROD.length;
+      document.getElementById("stat-cats").textContent = CATS.length;
+
+      const ICONS = { "STRUMENTI DI MISURA": "📏", "morse": "🗜️", "Punte inserti multitaglienti": "🔩", "mandrini tornio": "⚙️", "Frese a Placchette": "🛞", "Utensili tornio 2026": "🔪", "Torretta cartelle": "🧰", "divisori tavole piani": "🔄" };
+
+      document.getElementById("cats-grid").innerHTML = CATS.map((c) => `
+        <a class="cat-card" href="prodotti.html?cat=${encodeURIComponent(c.slug)}">
+          <div class="cat-card__icon">${ICONS[c.name] || "📦"}</div>
+          <span class="cat-card__count">${c.count} articoli</span>
+          <h3>${esc(c.name)}</h3>
+          <p>${c.subcategories.length ? c.subcategories.length + " sottocategorie" : "Catalogo immagini"}</p>
+        </a>`).join("");
+
+      document.getElementById("footer-cats").innerHTML = CATS.map((c) =>
+        `<li><a href="prodotti.html?cat=${encodeURIComponent(c.slug)}">${esc(c.name)}</a></li>`).join("");
+
+      // In evidenza: 6 prodotti sparsi tra le categorie
+      const step = Math.floor(PROD.length / 6) || 1;
+      const featured = [];
+      for (let i = 0; i < PROD.length && featured.length < 6; i += step) featured.push(PROD[i]);
+      document.getElementById("featured-grid").innerHTML = featured.map(productCard).join("");
+    });
+
+    function renderContacts() {
+      const c = window.SHOP_CONFIG;
+      const phone = document.getElementById("contact-phone");
+      const email = document.getElementById("contact-email");
+      const address = document.getElementById("contact-address");
+      const wa = document.getElementById("contact-whatsapp");
+
+      if (phone) phone.innerHTML = `<div class="cat-card__icon">📞</div><h3>Telefono</h3><p>${esc(c.phone || "—")}</p>`;
+      if (phone && c.phone) phone.href = "tel:" + esc(c.phoneLink);
+      if (email) email.innerHTML = `<div class="cat-card__icon">✉️</div><h3>Email</h3><p>${esc(c.email || "—")}</p>`;
+      if (email && c.email) email.href = "mailto:" + esc(c.email);
+      if (address) address.innerHTML = `<div class="cat-card__icon">📍</div><h3>Sede</h3><p>${esc(c.address || "—")}</p>`;
+
+      if (wa) {
+        if (c.whatsappLink) {
+          wa.innerHTML = `<div class="cat-card__icon">💬</div><h3>WhatsApp</h3><p>Scrivici direttamente</p>`;
+          wa.onclick = () => window.open(c.whatsappLink, "_blank");
+          wa.style.cursor = "pointer";
+        } else {
+          wa.style.display = "none";
+        }
+      }
+
+      const piva = document.getElementById("footer-piva");
+      if (piva) piva.textContent = c.piva ? "P.IVA " + c.piva : "";
+    }
+
+    async function submitContact(e) {
+      e.preventDefault();
+      const f = new FormData(e.target);
+      const payload = {
+        data: new Date().toISOString(),
+        nome: f.get("nome"), email: f.get("email"), telefono: f.get("telefono"), messaggio: f.get("messaggio"),
+      };
+      const r = await sendContact(payload);
+      toast(r.mode === "server" ? "Messaggio inviato ✓ Ti risponderemo al più presto" : "Messaggio salvato in locale (offline)");
+      e.target.reset();
+    }
+  </script>
+</body>
+</html>
