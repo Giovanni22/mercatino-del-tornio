@@ -9,11 +9,10 @@ window.SHOP_CONFIG = {
   tagline: "Utensileria industriale",
 
   // --- Contatti reali: sostituisci con i tuoi dati ---
-  phone: "+39 000 000 0000",        // es. "+39 333 123 4567"
-  email: "info@mercatinodeltornio.it", // es. "mio@email.it"
-  address: "Italia — officina e magazzino",
-  whatsapp: "",                     // es. "393331234567" (solo cifre, senza +)
-  piva: "",                         // es. "IT12345678901"
+  phone: "+39 329 963 6004",        // es. "+39 333 123 4567"
+  email: "meccanico.tornitore@gmail.com", // es. "mio@email.it"
+  address: "Italia",
+  whatsapp: "393299636004",        // es. "393331234567" (solo cifre, senza +)
 
   // --- Backend ---
   // Se il frontend è pubblicato su un dominio diverso dal backend,

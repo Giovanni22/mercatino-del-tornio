@@ -77,7 +77,7 @@ function mergedCatalog() {
 }
 
 /* ---------- Invio notifiche (email / webhook) ---------- */
-const SHOP_EMAIL = "info@mercatinodeltornio.it";
+const SHOP_EMAIL = "meccanico.tornitore@gmail.com";
 const EMAIL_FROM = process.env.EMAIL_FROM || "negozio@mercatinodeltornio.it";
 const EMAIL_TO = process.env.EMAIL_TO || SHOP_EMAIL;
 
