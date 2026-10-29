@@ -88,7 +88,7 @@
         }).join("");
 
         const noPriceHtml = anyNoPrice
-          ? `<div style="font-size:.85rem;color:var(--accento);margin-top:.5rem">⚠ Alcuni articoli hanno prezzo su richiesta: li confermeremo via email.</div>`
+          ? `<div style="font-size:.85rem;color:var(--accento);margin-top:.5rem">⚠ Alcuni articoli hanno prezzo su richiesta: li confermeremo su WhatsApp.</div>`
           : "";
 
         layout.innerHTML = `
@@ -103,8 +103,7 @@
             <h3 style="margin-top:1.4rem">Dati per l'ordine</h3>
             <form onsubmit="submitOrder(event)">
               <div class="form-group"><label>Nome e cognome *</label><input required name="nome"></div>
-              <div class="form-group"><label>Email *</label><input type="email" required name="email"></div>
-              <div class="form-group"><label>Telefono</label><input name="telefono"></div>
+              <div class="form-group"><label>Telefono / WhatsApp *</label><input required name="telefono" inputmode="tel" placeholder="es. 329 963 6004"></div>
               <div class="form-group"><label>Note / indirizzo spedizione</label><textarea rows="3" name="note"></textarea></div>
               <button class="btn btn--accento btn--block" type="submit">Invia ordine</button>
             </form>
@@ -137,8 +136,7 @@
           n.innerHTML =
             "⚠️ <b>Il server non è raggiungibile</b>: l'ordine è stato salvato solo su questo dispositivo e il negozio non lo ha ricevuto.<br>" +
             "Per essere sicuro di non perderlo, invialo ora:" +
-            (r.waLink ? ` <a class="btn btn--small btn--accento" href="${r.waLink}" target="_blank" rel="noopener">💬 Invia su WhatsApp</a>` : "") +
-            (CFG.email ? ` <a class="btn btn--small btn--ghost" href="mailto:${CFG.email}?subject=${encodeURIComponent("Ordine dal sito")}">✉️ Invia per email</a>` : "");
+            (r.waLink ? ` <a class="btn btn--small btn--accento" href="${r.waLink}" target="_blank" rel="noopener">💬 Invia su WhatsApp</a>` : "");
           if (r.noBackend) n.innerHTML += "<br><small>Apri il sito da http://localhost:8080 o dal link online (non come file .html).</small>";
         } else {
           n.className = "notice show";

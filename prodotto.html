@@ -86,7 +86,7 @@
               ${CFG.phone ? `<a class="btn btn--ghost btn--dark" href="tel:${esc(CFG.phoneLink)}">📞 ${esc(CFG.phone)}</a>` : ""}
             </div>
             <div class="product-detail__help">
-              <b>Hai domande?</b> ${CFG.email ? `Scrivici a <a href="mailto:${esc(CFG.email)}">${esc(CFG.email)}</a> oppure` : ""} compila il form di preventivo.
+              <b>Hai domande?</b> ${CFG.whatsappLink ? `Scrivici su <a href="${esc(CFG.whatsappLink)}?text=${encodeURIComponent("Salve, sono interessato a: " + p.title)}" target="_blank" rel="noopener">WhatsApp</a> oppure ` : ""}compila il form di preventivo.
             </div>
           </div>
         </div>`;

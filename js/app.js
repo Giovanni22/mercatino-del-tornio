@@ -266,7 +266,7 @@ async function sendQuote(q) {
       noBackend: !!e.noBackend,
       waLink: whatsappSummaryLink(
         "Richiesta preventivo dal sito",
-        [q.articolo ? `• ${q.articolo.titolo || q.articolo.id}` : "", "Nome: " + (q.nome || "-"), "Email: " + (q.email || "-"), q.telefono ? "Telefono: " + q.telefono : "", q.note ? "Note: " + q.note : ""].filter(Boolean)
+        [q.articolo ? `• ${q.articolo.titolo || q.articolo.id}` : "", "Nome: " + (q.nome || "-"), q.telefono ? "Telefono: " + q.telefono : "", q.note ? "Note: " + q.note : ""].filter(Boolean)
       ),
     };
   }
@@ -308,10 +308,10 @@ function requestQuote(id) {
       <p class="modal-sub">${esc(p.title)}</p>
       <form onsubmit="submitQuoteForm(event, '${p.id}')">
         <div class="form-group"><label>Nome e cognome *</label><input required name="nome"></div>
-        <div class="form-group"><label>Email *</label><input type="email" required name="email"></div>
-        <div class="form-group"><label>Telefono</label><input name="telefono"></div>
-        <div class="form-group"><label>Note</label><textarea rows="3" name="note"></textarea></div>
+        <div class="form-group"><label>Telefono / WhatsApp *</label><input required name="telefono" inputmode="tel" placeholder="es. 329 963 6004"></div>
+        <div class="form-group"><label>Messaggio</label><textarea rows="3" name="note" placeholder="Misure, quantità, spedizione…"></textarea></div>
         <button class="btn btn--accento btn--block" type="submit">Invia richiesta</button>
+        ${window.SHOP_CONFIG.whatsappLink ? `<a class="btn btn--ghost btn--block" style="margin-top:.6rem" href="${esc(window.SHOP_CONFIG.whatsappLink)}?text=${encodeURIComponent("Salve, sono interessato a: " + p.title)}" target="_blank" rel="noopener">💬 Oppure scrivi su WhatsApp</a>` : ""}
       </form>
     </div>`;
   m.onclick = (e) => { if (e.target === m) closeModal(); };
@@ -327,7 +327,7 @@ async function submitQuoteForm(e, id) {
   const q = {
     data: new Date().toISOString(),
     articolo: { id, titolo: p?.title, prezzo: p?.price ?? null },
-    nome: f.get("nome"), email: f.get("email"), telefono: f.get("telefono"), note: f.get("note"),
+    nome: f.get("nome"), telefono: f.get("telefono"), note: f.get("note"),
   };
   const r = await sendQuote(q);
   closeModal();

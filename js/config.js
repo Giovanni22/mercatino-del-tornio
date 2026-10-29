@@ -8,9 +8,10 @@ window.SHOP_CONFIG = {
   name: "Mercatino del Tornio",
   tagline: "Utensileria industriale",
 
-  // --- Contatti reali: sostituisci con i tuoi dati ---
+  // --- Contatti mostrati sul sito: SOLO telefono e WhatsApp ---
+  // (l'email non è più mostrata: serve solo al backend per le notifiche interne)
   phone: "+39 329 963 6004",        // es. "+39 333 123 4567"
-  email: "meccanico.tornitore@gmail.com", // es. "mio@email.it"
+  email: "meccanico.tornitore@gmail.com", // solo notifiche interne, non mostrata sul sito
   address: "Italia",
   whatsapp: "393299636004",        // es. "393331234567" (solo cifre, senza +)
 

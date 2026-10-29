@@ -94,7 +94,7 @@ function orderToHtml(o) {
     <h2>Nuovo ordine ricevuto</h2>
     <p><b>Data:</b> ${htmlEsc(o.data)}</p>
     <p><b>Nome:</b> ${htmlEsc(o.cliente?.nome)}<br>
-    <b>Email:</b> ${htmlEsc(o.cliente?.email)}<br>
+    ${o.cliente?.email ? `<b>Email:</b> ${htmlEsc(o.cliente.email)}<br>` : ""}
     <b>Telefono:</b> ${htmlEsc(o.cliente?.telefono)}</p>
     <p><b>Note:</b> ${htmlEsc(o.cliente?.note || "—")}</p>
     <table border="1" cellpadding="6" cellspacing="0" style="border-collapse:collapse">
@@ -104,7 +104,7 @@ function orderToHtml(o) {
 function quoteToHtml(q) {
   return `<h2>Richiesta preventivo</h2>
     <p><b>Articolo:</b> ${htmlEsc(q.articolo?.titolo || q.articolo?.id)}<br>
-    <b>Nome:</b> ${htmlEsc(q.nome)}<br><b>Email:</b> ${htmlEsc(q.email)}<br><b>Telefono:</b> ${htmlEsc(q.telefono)}</p>
+    <b>Nome:</b> ${htmlEsc(q.nome)}<br>${q.email ? `<b>Email:</b> ${htmlEsc(q.email)}<br>` : ""}<b>Telefono:</b> ${htmlEsc(q.telefono)}</p>
     <p><b>Note:</b> ${htmlEsc(q.note || "—")}</p>`;
 }
 function contactToHtml(c) {
@@ -211,7 +211,7 @@ const server = http.createServer(async (req, res) => {
 
       if (method === "POST" && url === "/api/orders") {
         const o = await readBody(req);
-        if (!o || !o.cliente || !o.cliente.email) return json(res, 400, { ok: false, error: "Dati mancanti" });
+        if (!o || !o.cliente || (!o.cliente.email && !o.cliente.telefono)) return json(res, 400, { ok: false, error: "Dati mancanti" });
         o.data = o.data || new Date().toISOString();
         o.numero = "ORD-" + Date.now();
         appendJSON("orders.json", o);
@@ -224,7 +224,7 @@ const server = http.createServer(async (req, res) => {
 
       if (method === "POST" && url === "/api/quotes") {
         const q = await readBody(req);
-        if (!q || !q.email) return json(res, 400, { ok: false, error: "Email mancante" });
+        if (!q || (!q.email && !q.telefono)) return json(res, 400, { ok: false, error: "Telefono mancante" });
         q.data = q.data || new Date().toISOString();
         appendJSON("quotes.json", q);
         let via = null;

@@ -123,8 +123,7 @@
           <div class="admin-card">
             <div class="admin-card__head"><b>${esc2(o.numero || o.data)}</b><span>${fdate(o.data)}</span></div>
             <div class="admin-card__meta">
-              <b>${esc2(o.cliente?.nome)}</b> · ${esc2(o.cliente?.email)}
-              ${o.cliente?.telefono ? " · " + esc2(o.cliente.telefono) : ""}
+              <b>${esc2(o.cliente?.nome)}</b>${o.cliente?.email ? " · " + esc2(o.cliente.email) : ""}${o.cliente?.telefono ? " · " + esc2(o.cliente.telefono) : ""}
             </div>
             <table class="admin-table">
               <tr><th>Articolo</th><th>Qtà</th><th>Prezzo</th></tr>
@@ -143,7 +142,7 @@
         pane.innerHTML = list.map((q) => `
           <div class="admin-card">
             <div class="admin-card__head"><b>${esc2(q.articolo?.titolo || q.articolo?.id)}</b><span>${fdate(q.data)}</span></div>
-            <div class="admin-card__meta"><b>${esc2(q.nome)}</b> · ${esc2(q.email)} ${q.telefono ? " · " + esc2(q.telefono) : ""}</div>
+            <div class="admin-card__meta"><b>${esc2(q.nome)}</b>${q.email ? " · " + esc2(q.email) : ""}${q.telefono ? " · " + esc2(q.telefono) : ""}</div>
             ${q.note ? `<div class="admin-note"><b>Note:</b> ${esc2(q.note)}</div>` : ""}
           </div>`).join("");
       } catch (e) { pane.innerHTML = `<div class="admin-error">${esc2(e.message)}</div>`; }
