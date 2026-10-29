@@ -124,13 +124,26 @@
           articoli: getCart().map((i) => ({ id: i.id, titolo: productById(i.id)?.title, qty: i.qty, prezzo: productById(i.id)?.price ?? null })),
         };
         const r = await placeOrder(ordine);
-        localStorage.removeItem("cart");
-        updateCartBadge();
         const n = document.getElementById("notice");
-        n.textContent = r.mode === "server"
-          ? "✓ Ordine inviato con successo! Ti ricontatteremo per conferma e pagamento."
-          : "✓ Ordine salvato (nessun server collegato): verrà gestito manualmente.";
-        n.classList.add("show");
+        if (r.mode === "server") {
+          localStorage.removeItem("cart");
+          updateCartBadge();
+          n.className = "notice show";
+          n.innerHTML = "✓ Ordine inviato con successo! Ti ricontatteremo per conferma e pagamento.";
+        } else if (r.mode === "local") {
+          localStorage.removeItem("cart");
+          updateCartBadge();
+          n.className = "notice show";
+          n.innerHTML =
+            "⚠️ <b>Il server non è raggiungibile</b>: l'ordine è stato salvato solo su questo dispositivo e il negozio non lo ha ricevuto.<br>" +
+            "Per essere sicuro di non perderlo, invialo ora:" +
+            (r.waLink ? ` <a class="btn btn--small btn--accento" href="${r.waLink}" target="_blank" rel="noopener">💬 Invia su WhatsApp</a>` : "") +
+            (CFG.email ? ` <a class="btn btn--small btn--ghost" href="mailto:${CFG.email}?subject=${encodeURIComponent("Ordine dal sito")}">✉️ Invia per email</a>` : "");
+          if (r.noBackend) n.innerHTML += "<br><small>Apri il sito da http://localhost:8080 o dal link online (non come file .html).</small>";
+        } else {
+          n.className = "notice show";
+          n.innerHTML = `❗ Invio non riuscito: ${r.message || "errore"}. <b>Il carrello è ancora pieno</b>, riprova oppure scrivici su WhatsApp.`;
+        }
         render();
         window.scrollTo({ top: 0, behavior: "smooth" });
       }

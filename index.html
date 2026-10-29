@@ -192,8 +192,15 @@
         nome: f.get("nome"), email: f.get("email"), telefono: f.get("telefono"), messaggio: f.get("messaggio"),
       };
       const r = await sendContact(payload);
-      toast(r.mode === "server" ? "Messaggio inviato ✓ Ti risponderemo al più presto" : "Messaggio salvato in locale (offline)");
-      e.target.reset();
+      if (r.mode === "server") {
+        toast("Messaggio inviato ✓ Ti risponderemo al più presto");
+        e.target.reset();
+      } else if (r.mode === "local") {
+        toast("⚠️ Server non raggiungibile: messaggio salvato solo su questo dispositivo. Scrivici su WhatsApp!", r.waLink);
+        e.target.reset();
+      } else {
+        toast("❗ Invio non riuscito: " + (r.message || "errore") + ". Riprova o usa WhatsApp.", window.SHOP_CONFIG.whatsappLink);
+      }
     }
   </script>
 </body>

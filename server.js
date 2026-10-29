@@ -54,7 +54,8 @@ function writeJSON(file, data) {
 function appendJSON(file, obj) {
   const list = readJSON(file, []);
   list.unshift(obj);
-  writeJSON(file, list);
+  try { writeJSON(file, list); }
+  catch (e) { console.error("Scrittura " + file + " fallita:", e.message); return 0; }
   return list.length;
 }
 

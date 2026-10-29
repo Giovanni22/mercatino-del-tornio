@@ -133,7 +133,7 @@ function productCard(p) {
 }
 
 /* ---------- Toast ---------- */
-function toast(msg) {
+function toast(msg, link) {
   let t = document.getElementById("toast");
   if (!t) {
     t = document.createElement("div");
@@ -142,50 +142,152 @@ function toast(msg) {
     document.body.appendChild(t);
   }
   t.textContent = msg;
+  if (link) {
+    const a = document.createElement("a");
+    a.href = link;
+    a.target = "_blank";
+    a.rel = "noopener";
+    a.textContent = "💬 Apri WhatsApp";
+    a.style.cssText = "display:inline-block;margin-left:.6rem;color:#ffcf5c;text-decoration:underline;font-weight:800;";
+    t.appendChild(a);
+  }
   requestAnimationFrame(() => { t.style.opacity = "1"; t.style.transform = "translateX(-50%) translateY(0)"; });
   clearTimeout(t._t);
   t._t = setTimeout(() => {
     t.style.opacity = "0";
     t.style.transform = "translateX(-50%) translateY(20px)";
-  }, 2200);
+  }, link ? 9000 : 2200);
 }
 
 /* ---------- API / invio dati (con fallback locale) ---------- */
-async function postJSON(path, payload) {
-  const res = await fetch(window.API_BASE + path, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  if (!res.ok) {
-    let msg = "Errore " + res.status;
-    try { const j = await res.json(); if (j.error) msg = j.error; } catch {}
-    throw new Error(msg);
+const API_TIMEOUT_MS = 15000;
+
+/* URL completo dell'API. Restituisce null se il sito è aperto come file
+   locale (file://) senza backend: in quel caso l'API non può esistere. */
+function apiUrl(path) {
+  if (!window.API_BASE && location.protocol === "file:") return null;
+  return (window.API_BASE || "") + path;
+}
+
+async function postJSON(path, payload, { retries = 1 } = {}) {
+  const url = apiUrl(path);
+  if (!url) {
+    const e = new Error("Sito aperto come file locale: backend non disponibile");
+    e.noBackend = true;
+    throw e;
   }
-  return res.json();
+  for (let attempt = 0; ; attempt++) {
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), API_TIMEOUT_MS);
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        signal: ctrl.signal,
+      });
+      if (!res.ok) {
+        let msg = "Errore " + res.status;
+        try { const j = await res.json(); if (j.error) msg = j.error; } catch {}
+        const err = new Error(msg);
+        err.status = res.status;
+        throw err;
+      }
+      return await res.json();
+    } catch (e) {
+      /* errori di rete / server spento (Render si "sveglia" in ~30s): riprovo una volta */
+      const network = e.noBackend || e.name === "AbortError" || e instanceof TypeError;
+      if (network && attempt < retries) {
+        await new Promise((r) => setTimeout(r, 2000));
+        continue;
+      }
+      throw e;
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+}
+
+/* Link WhatsApp con il riepilogo: usato se il server non è raggiungibile
+   così l'ordine non va perso. */
+function whatsappSummaryLink(titolo, righe) {
+  const num = window.SHOP_CONFIG && window.SHOP_CONFIG.whatsapp;
+  if (!num) return "";
+  const text = [titolo, ...righe].join("\n");
+  return "https://wa.me/" + num + "?text=" + encodeURIComponent(text);
+}
+
+function orderLines(ordine) {
+  const art = (ordine.articoli || []).map(
+    (a) => `• ${a.titolo || a.id} × ${a.qty}${a.prezzo != null ? " — " + a.prezzo + " €" : " — su richiesta"}`
+  );
+  const c = ordine.cliente || {};
+  return [
+    ...art,
+    "",
+    "Nome: " + (c.nome || "-"),
+    "Email: " + (c.email || "-"),
+    c.telefono ? "Telefono: " + c.telefono : "",
+    (c.note || c.indirizzo) ? "Note: " + (c.note || c.indirizzo) : "",
+  ].filter(Boolean);
 }
 
 async function placeOrder(ordine) {
   try {
-    await postJSON("/api/orders", ordine);
-    return { ok: true, mode: "server" };
+    const r = await postJSON("/api/orders", ordine);
+    return { ok: true, mode: "server", id: r.id };
   } catch (e) {
+    if (e.status) return { ok: false, mode: "server-error", message: e.message };
     // fallback: salva in locale (nessun backend raggiungibile)
     const ordini = JSON.parse(localStorage.getItem("ordini") || "[]");
     ordini.unshift(ordine);
     localStorage.setItem("ordini", JSON.stringify(ordini));
-    return { ok: true, mode: "local" };
+    return {
+      ok: true,
+      mode: "local",
+      noBackend: !!e.noBackend,
+      waLink: whatsappSummaryLink("Nuovo ordine dal sito", orderLines(ordine)),
+    };
   }
 }
 
 async function sendQuote(q) {
-  try { return await postJSON("/api/quotes", q); }
-  catch { const list = JSON.parse(localStorage.getItem("preventivi") || "[]"); list.unshift(q); localStorage.setItem("preventivi", JSON.stringify(list)); return { ok: true, mode: "local" }; }
+  try {
+    const r = await postJSON("/api/quotes", q);
+    return { ok: true, mode: "server", via: r.via };
+  } catch (e) {
+    if (e.status) return { ok: false, mode: "server-error", message: e.message };
+    const list = JSON.parse(localStorage.getItem("preventivi") || "[]");
+    list.unshift(q);
+    localStorage.setItem("preventivi", JSON.stringify(list));
+    return {
+      ok: true,
+      mode: "local",
+      noBackend: !!e.noBackend,
+      waLink: whatsappSummaryLink(
+        "Richiesta preventivo dal sito",
+        [q.articolo ? `• ${q.articolo.titolo || q.articolo.id}` : "", "Nome: " + (q.nome || "-"), "Email: " + (q.email || "-"), q.telefono ? "Telefono: " + q.telefono : "", q.note ? "Note: " + q.note : ""].filter(Boolean)
+      ),
+    };
+  }
 }
 
 async function sendContact(c) {
-  try { return await postJSON("/api/contact", c); }
-  catch { const list = JSON.parse(localStorage.getItem("messaggi") || "[]"); list.unshift(c); localStorage.setItem("messaggi", JSON.stringify(list)); return { ok: true, mode: "local" }; }
+  try {
+    const r = await postJSON("/api/contact", c);
+    return { ok: true, mode: "server", via: r.via };
+  } catch (e) {
+    if (e.status) return { ok: false, mode: "server-error", message: e.message };
+    const list = JSON.parse(localStorage.getItem("messaggi") || "[]");
+    list.unshift(c);
+    localStorage.setItem("messaggi", JSON.stringify(list));
+    return {
+      ok: true,
+      mode: "local",
+      noBackend: !!e.noBackend,
+      waLink: whatsappSummaryLink("Messaggio dal sito", ["Nome: " + (c.nome || "-"), "Email: " + (c.email || "-"), c.telefono ? "Telefono: " + c.telefono : "", c.messaggio || c.note || ""].filter(Boolean)),
+    };
+  }
 }
 
 /* ---------- Modale richiesta preventivo ---------- */
@@ -229,7 +331,9 @@ async function submitQuoteForm(e, id) {
   };
   const r = await sendQuote(q);
   closeModal();
-  toast(r.mode === "server" ? "Preventivo inviato ✓ Ti ricontatteremo" : "Richiesta salvata in locale (offline)");
+  if (r.mode === "server") toast("Preventivo inviato ✓ Ti ricontatteremo");
+  else if (r.mode === "local") toast("⚠️ Server non raggiungibile: richiesta salvata solo su questo dispositivo. Scrivici su WhatsApp!", r.waLink);
+  else toast("❗ Invio non riuscito: " + (r.message || "errore") + ". Riprova o scrivici su WhatsApp.", window.SHOP_CONFIG.whatsappLink);
 }
 
 /* ---------- Lightbox / scheda ---------- */
